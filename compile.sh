@@ -1,11 +1,9 @@
 #!/bin/bash
 
 version=$(grep "const VERSION" Main.go|awk -F'"' '{print $2}')
-echo $version
 for platform in $(go tool dist list)
 do
   rm -rf portscan
-  echo $platform
   goos=$(echo $platform|awk -F'/' '{print $1}')
   goarch=$(echo $platform|awk -F'/' '{print $2}')
   if [ "$goos" == "android" ];then
