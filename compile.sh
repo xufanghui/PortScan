@@ -18,5 +18,5 @@ do
 
   CGO_ENABLED=0 GOOS=$goos GOARCH=$goarch go build -o portscan Main.go
   echo "tar compress portscan_${version}_${goos}_${goarch}.tar.gz"
-  tar -czvf "portscan_${version}_${goos}_${goarch}.tar.gz" portscan
+  tar -czvf "portscan_${version}_${goos}_${goarch}.tar.gz" portscan README.md
 done
