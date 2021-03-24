@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const VERSION = "0.0.1"
+const VERSION = "v0.0.1"
 
 type ScanResult struct {
 	address   string `ip address，only support IP v4`
@@ -20,6 +20,7 @@ type ScanResult struct {
 	socketStopTime int64 `socket stopped time， unit is nanosecond`
 	err error
 	timeout time.Duration
+	count int64
 
 }
 
@@ -34,7 +35,7 @@ var timeout time.Duration = 200 * time.Millisecond
 // local address ,example: 0.0.0.0:0
 var localAddress *string
 
-func Task(result ScanResult ) {
+func Task(result *ScanResult ) {
 	// timeout
 	finalTimeout := timeout
 	result.socketStartTime = time.Now().UnixNano()
@@ -71,13 +72,13 @@ func Task(result ScanResult ) {
 	return
 }
 
-type OneFinishCallBack func(result ScanResult)
+type OneFinishCallBack func(result *ScanResult)
 
-func callBackForConsolePrintln(result ScanResult){
-	fmt.Printf("count=%d, address=%s, opend=%v, startTime=%d, stopTime=%d, timeout=%v, times=%v, totalTimes=%v, err=%v\n",finishedTaskCount, result.address, result.opened, result.socketStartTime, result.socketStopTime, result.timeout, (result.socketStopTime-result.socketStartTime)/1e6, (result.socketStopTime-result.incomeQTime)/1e6, result.err )
+func callBackForConsolePrintln(result *ScanResult){
+	fmt.Printf("count=%d, address=%s, opend=%v, startTime=%d, stopTime=%d, timeout=%v, times=%v, totalTimes=%v, err=%v\n", result.count, result.address, result.opened, result.socketStartTime, result.socketStopTime, result.timeout, (result.socketStopTime-result.socketStartTime)/1e6, (result.socketStopTime-result.incomeQTime)/1e6, result.err )
 }
 
-func Workers(task func(result ScanResult), callBack OneFinishCallBack, allFinishedCallBack func() ) chan ScanResult {
+func Workers(task func(result *ScanResult), callBack OneFinishCallBack, allFinishedCallBack func() ) chan ScanResult {
 	input := make(chan ScanResult)
 	ack := make(chan bool)
 	for i := 0; i < routeCount; i++ {
@@ -85,9 +86,9 @@ func Workers(task func(result ScanResult), callBack OneFinishCallBack, allFinish
 			for {
 				taskInput, ok := <-input
 				if ok {
-					task(taskInput)
+					task(&taskInput)
 					ack <- true
-					callBack(taskInput)
+					callBack(&taskInput)
 				}
 			}
 		}()
@@ -148,7 +149,7 @@ func main(){
 
 	exit := make(chan bool)
 
-	workers := Workers(func(result ScanResult) {
+	workers := Workers(func(result *ScanResult) {
 		Task(result)
 	}, callBackForConsolePrintln, func() {
 		exit <- true
@@ -168,7 +169,7 @@ func main(){
 
 
 	taskCount = arange*brange*crange*drange*len(ports)
-
+    var count int64 = 0
 	for a := *astart; a <= *aend; a++{
 		for b:= *bstart; b<= *bend; b++{
 			for c:= *cstart; c<= *cend; c++{
@@ -177,7 +178,8 @@ func main(){
 
 						address := strconv.Itoa(a)+"."+strconv.Itoa(b)+"."+strconv.Itoa(c)+"."+strconv.Itoa(d)+":"+ports[i]
 
-						scanResult := ScanResult{address,false,time.Now().UnixNano(),0,0, nil, 0}
+						scanResult := ScanResult{address,false,time.Now().UnixNano(),0,0, nil, 0, count }
+						count = count + 1
 						workers <- scanResult
 					}
 
