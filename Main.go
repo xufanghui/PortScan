@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -117,23 +119,60 @@ func StartProfile(){
 
 func main(){
 
-	astart := flag.Int("a_start", 172, "ip v4 as : a.b.c.d, start a range, as: 0~255")
-	aend := flag.Int("a_end",172 , "ip v4 as : a.b.c.d, end a range, as: 0~255")
-	bstart := flag.Int("b_start", 16, "ip v4 as : a.b.c.d, start b range, as: 0~255")
-	bend := flag.Int("b_end", 17, "ip v4 as : a.b.c.d, end b range, as: 0~255")
-	cstart := flag.Int("c_start", 1, "ip v4 as : a.b.c.d, start c range, as: 0~255")
-	cend := flag.Int("c_end", 255, "ip v4 as : a.b.c.d, end c range, as: 0~255")
-	dstart := flag.Int("d_start", 1, "ip v4 as : a.b.c.d, start d range, as: 0~255")
-	dend := flag.Int("d_end", 255, "ip v4 as : a.b.c.d, end d range, as: 0~255")
+	start := flag.String("start", "192.168.1.1", "ip v4 as : a.b.c.d, start a range, as: 192.168.1.1")
+	end := flag.String("end", "192.168.1.255", "ip v4 as : a.b.c.d, end a range, as: 192.168.1.255")
+
 	input_timeout := flag.String("timeout", "200ms", "timeout millseconds")
 	ports1 := flag.String("ports", "80,443", "ports,default 80,443")
 	pcount := flag.Int("pcount", 2000, "go route total count")
 	laddr := flag.String("laddr", "0.0.0.0:0", "local ip address and port. as: 0.0.0.0:0")
+	reg := regexp.MustCompile(`^(([1-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.)(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){2}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$`)
+	flag.Parse()
+
+	if !reg.MatchString(*start) {
+		fmt.Printf("start ip format error, please check")
+		os.Exit(1)
+	}
+
+	if !reg.MatchString(*end) {
+		fmt.Printf("end ip format error, please check")
+		os.Exit(1)
+	}
+
+
 
 	fmt.Printf("version is %s\n\n", VERSION)
 	go  StartProfile()
 
-	flag.Parse()
+	astart := 1
+	aend := 1
+	bstart := 1
+	bend := 1
+	cstart := 1
+	cend := 1
+	dstart := 1
+	dend := 1
+
+	startIp := strings.Split(*start, ".")
+	endIp := strings.Split(*end, ".")
+	astart, _ = strconv.Atoi(startIp[0])
+	bstart, _ = strconv.Atoi(startIp[1])
+	cstart, _ = strconv.Atoi(startIp[2])
+	dstart, _ = strconv.Atoi(startIp[3])
+
+	aend, _ = strconv.Atoi(endIp[0])
+	bend, _ = strconv.Atoi(endIp[1])
+	cend, _ = strconv.Atoi(endIp[2])
+	dend, _ = strconv.Atoi(endIp[3])
+
+	if astart> aend ||
+	    bstart> bend ||
+		cstart> cend ||
+		dstart> dend {
+		fmt.Printf("start ip range > end ip range, please check")
+		os.Exit(1)
+	}
+
 
 	if  input_timeout !=nil {
 		timeout ,_ = time.ParseDuration(*input_timeout)
@@ -145,7 +184,7 @@ func main(){
 
 	routeCount = int(*pcount)
 
-	fmt.Printf("astart=%d, aend=%d, bstart=%d, bend=%d, cstart=%d, cend=%d,  dstart=%d, dend=%d,  timeout=%s\n",*astart,*aend,*bstart,*bend,*cstart,*cend,*dstart,*dend,*input_timeout);
+	fmt.Printf("start=%s, end=%s, timeout=%s\n",*start, *end, *input_timeout)
 
 	exit := make(chan bool)
 
@@ -159,21 +198,21 @@ func main(){
 
 	ports := strings.Split(*ports1,",")
 
-	arange := *aend-*astart +1
+	arange := aend-astart +1
 
-	brange := *bend-*bstart +1
+	brange := bend-bstart +1
 
-	crange := *cend-*cstart +1
+	crange := cend-cstart +1
 
-	drange := *dend-*dstart +1
+	drange := dend-dstart +1
 
 
 	taskCount = arange*brange*crange*drange*len(ports)
     var count int64 = 0
-	for a := *astart; a <= *aend; a++{
-		for b:= *bstart; b<= *bend; b++{
-			for c:= *cstart; c<= *cend; c++{
-				for d:= *dstart; d<= *dend; d++{
+	for a := astart; a <= aend; a++{
+		for b:= bstart; b<= bend; b++{
+			for c:= cstart; c<= cend; c++{
+				for d:= dstart; d<= dend; d++{
 					for i := range ports{
 
 						address := strconv.Itoa(a)+"."+strconv.Itoa(b)+"."+strconv.Itoa(c)+"."+strconv.Itoa(d)+":"+ports[i]
