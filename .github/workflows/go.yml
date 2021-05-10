@@ -19,9 +19,6 @@ jobs:
         go-version: 1.15
 
     - name: Build
-      with:
-        publish_latest: true
-        env:
-          GITHUB_TOKEN: '${{secrets.GITHUB_TOKEN}}'
-      run: bash compile.sh
+      run: |
+          bash compile.sh
 
